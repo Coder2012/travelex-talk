@@ -14,7 +14,7 @@ export default {
   easing: TWEEN.Easing.Quadratic.InOut,
   duration: 500,
   model: {
-    path: './assets/models/BlenderObject.glb',
+    path: './assets/models/kings-place.glb',
     scale: 10
   },
   texture: {

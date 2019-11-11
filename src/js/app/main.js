@@ -1,6 +1,7 @@
 // Global imports -
 import * as THREE from 'three'
 import { TweenMax, Power2 } from 'gsap/TweenMax'
+import * as YUKA from '../lib/yuka'
 
 // Local imports -
 // Components
@@ -23,6 +24,9 @@ import DatGUI from './managers/datGUI'
 
 // data
 import Config from './../data/config'
+
+import { createConvexRegionHelper } from './helpers/navmeshHelper'
+import { Enemy } from './components/Enemy'
 // -- End of imports
 
 // This class instantiates and ties all of the components together, starts the loading process and renders the main loop
@@ -31,12 +35,44 @@ export default class Main {
     // Set container property to container element
     this.container = container
 
+    const loadingManager = new THREE.LoadingManager( () => {
+
+      // 3D assets are loaded, now load nav mesh
+      console.log('test loading manager')
+    } );
+
     // Start Three clock
     this.clock = new THREE.Clock()
 
     // Main scene creation
     this.scene = new THREE.Scene()
     this.scene.fog = new THREE.FogExp2(Config.fog.color, Config.fog.near)
+
+    // const boxGeometry = new THREE.BoxBufferGeometry( 10, 10, 10 );
+		// const boxMaterial = new THREE.MeshBasicMaterial( {color: 0x00ff00} );
+    // const cube = new THREE.Mesh( boxGeometry, boxMaterial );
+		// cube.matrixAutoUpdate = false;
+		// this.scene.add(cube);
+
+    // this.enemy = new Enemy();
+    // this.enemy.boundingRadius = 0.25;
+    // this.enemy.setRenderComponent(cube, this.syncEnemy);
+    // this.enemy.position.set( 0, 0, 0);
+
+    const loader = new YUKA.NavMeshLoader();
+			loader.load( './assets/models/navmesh3.glb', { epsilonCoplanarTest: 0.25 } ).then( ( navMesh ) => {
+
+				// visualize convex regions
+
+        const navMeshGroup = createConvexRegionHelper( navMesh );
+        navMeshGroup.scale.multiplyScalar(10)
+        this.scene.add( navMeshGroup );
+        
+				// player.navMesh = navMesh;
+        enemy.navMesh = navMesh;
+        
+        console.log('loaded navmesh')
+			} );
 
     // Get Device Pixel Ratio first for retina
     if (window.devicePixelRatio) {
@@ -56,13 +92,13 @@ export default class Main {
     lights.forEach(light => this.light.place(light))
 
     // Create and place geo in scene
-    this.geometry = new Geometry(this.scene)
-    this.geometry.make('plane')(150, 150, 10, 10)
-    this.geometry.place([0, 1, 0], [Math.PI / 2, 0, 0])
+    // this.geometry = new Geometry(this.scene)
+    // this.geometry.make('plane')(150, 150, 10, 10)
+    // this.geometry.place([0, 1, 0], [Math.PI / 2, 0, 0])
 
-    this.box = new Geometry(this.scene)
-    this.box.make('box')(10, 10, 10, 8, 8, 8)
-    this.box.place([0, 10, 20], [0, 0, 0])
+    // this.box = new Geometry(this.scene)
+    // this.box.make('box')(10, 10, 10, 8, 8, 8)
+    // this.box.place([0, 10, 20], [0, 0, 0])
 
     // Set up rStats if dev environment
     if (Config.isDev && Config.isShowingStats) {
@@ -101,23 +137,25 @@ export default class Main {
           new DatGUI(this, this.model.obj)
         }
 
-        this.lift = this.model.obj.getObjectByName('lift')
-
         // Everything is now fully loaded
         Config.isLoaded = true
         this.container.querySelector('#loading').style.display = 'none'
 
-        TweenMax.to(this.lift.position, 2, {
-          y: 4,
-          repeat: -1,
-          yoyo: true,
-          ease: Power2.easeInOut
-        })
+        // TweenMax.to(this.lift.position, 2, {
+        //   y: 4,
+        //   repeat: -1,
+        //   yoyo: true,
+        //   ease: Power2.easeInOut
+        // })
       }
     })
 
     // Start render which does not wait for model fully loaded
     this.render()
+  }
+
+  syncEnemy( entity, renderComponent ) {
+    renderComponent.matrix.copy( entity.worldMatrix )
   }
 
   render() {
@@ -134,14 +172,6 @@ export default class Main {
       Stats.end()
     }
 
-    if (this.lift && this.box.mesh) {
-      console.log(Math.abs(this.box.mesh.position.distanceTo(this.lift.position)))
-      if (this.box.mesh.position.distanceTo(this.lift.position) > 22){
-        this.lift.material.color.setHex(0xff0000)
-      }else{
-        this.lift.material.color.setHex(0x00ff00)
-      }
-    }
     // Delta time is sometimes needed for certain updates
     //const delta = this.clock.getDelta();
 
@@ -151,4 +181,5 @@ export default class Main {
     // RAF
     requestAnimationFrame(this.render.bind(this)) // Bind the main class instead of window object
   }
+  
 }
